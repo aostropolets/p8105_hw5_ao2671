@@ -1,0 +1,42 @@
+---
+title: "Homework 5"
+author: "Anna Ostropolets"
+date: "11/12/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(rvest)
+library(RCurl)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r data}
+# loading the data
+url <- getURL("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv")
+data <- read.csv(text = url)
+
+```
+
+### describiing the raw data
+The data contains `r nrow(data)` observations of homicides, committed in `r data %>% distinct (city) %>% count()` cities in `r data %>% distinct (state) %>% count()` states.
+It has the names of the victims, their age as well as their gender and the disposition of cases and location (latitute and longitude).
+
+```{r summary, warning=FALSE, message=FALSE}
+# summarizing numer of  homicides
+data %>%
+  mutate(
+    city_state = str_c(city, state, sep = ","),
+    status = case_when(
+      disposition == "Closed without arrest" ~ "unsolved",
+      disposition == "Open/No arrest" ~ "unsolved",
+      disposition == "Closed by arrest" ~ "solved",
+    ),
+    victim_age = na_if(victim_age,'Unknown')
+  ) %>%
+  filter(city_state != "Tulsa_AL") %>%
+  group_by(city_state) %>%
+  summarize (total_cnt = n(),
+             unsolved_cnt = sum(status == "unsolved")) 
+```
