@@ -24,8 +24,9 @@ The data contains `r nrow(data)` observations of homicides, committed in `r data
 It has the names of the victims, their age as well as their gender and the disposition of cases and location (latitute and longitude).
 
 ```{r summary, warning=FALSE, message=FALSE}
-# summarizing numer of  homicides
-data %>%
+# summarizing numebr of  homicides
+aggregated_data<-
+  data %>%
   mutate(
     city_state = str_c(city, state, sep = ","),
     status = case_when(
@@ -40,3 +41,50 @@ data %>%
   summarize (total_cnt = n(),
              unsolved_cnt = sum(status == "unsolved")) 
 ```
+
+
+# create a prop.test function to estimate proportion of homicides and use it for all cities avaliable
+
+```{r prop_test, message=FALSE, warning=FALSE}
+
+prop.test(
+  aggregated_data %>% filter(city_state == "Baltimore,MD") %>% pull(hom_unsolved), 
+  aggregated_data %>% filter(city_state == "Baltimore,MD") %>% pull(hom_total)) %>% 
+  broom::tidy()
+  
+results_df <- 
+  aggregated_data%>%
+  mutate(
+    prop_tests = map2(.x = unsolved_cnt, .y = total_cnt, ~prop.test(x=.x, n= .y)), tidy_tests = map(.x = prop_tests, ~broom::tidy(.x))
+  ) %>%
+  select(-prop_tests) %>%
+  unnest(tidy_tests) %>%
+  select(city_state, estimate, conf.low, conf.high)
+
+```
+
+# plot estimates and CIs
+
+```{r plot}
+results_df %>%
+  mutate(city_state = fct_reorder(city_state, estimate)) %>%
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+On average, subjects in experimental group have higher values than in the control group. There is also an increase in values over time in experimental group while in the control group there are no significant changes.
+
+```{r}
+lgt_df %>% 
+  mutate(id = as.factor(id),
+         week = as.factor(week)) %>% 
+  ggplot(aes(x = week, y = observations, group = id)) +
+  geom_line(aes(color = id)) +
+  facet_grid(.~group) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+
+
