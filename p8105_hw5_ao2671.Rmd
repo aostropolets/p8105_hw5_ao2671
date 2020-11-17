@@ -12,6 +12,8 @@ library(RCurl)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Problem 1
+
 ```{r data}
 # loading the data
 url <- getURL("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv")
@@ -19,7 +21,8 @@ data <- read.csv(text = url)
 
 ```
 
-### describiing the raw data
+## describiing the raw data
+
 The data contains `r nrow(data)` observations of homicides, committed in `r data %>% distinct (city) %>% count()` cities in `r data %>% distinct (state) %>% count()` states.
 It has the names of the victims, their age as well as their gender and the disposition of cases and location (latitute and longitude).
 
@@ -43,13 +46,13 @@ aggregated_data<-
 ```
 
 
-# create a prop.test function to estimate proportion of homicides and use it for all cities avaliable
+## create a prop.test function to estimate proportion of homicides and use it for all cities avaliable
 
 ```{r prop_test, message=FALSE, warning=FALSE}
 
 prop.test(
-  aggregated_data %>% filter(city_state == "Baltimore,MD") %>% pull(hom_unsolved), 
-  aggregated_data %>% filter(city_state == "Baltimore,MD") %>% pull(hom_total)) %>% 
+  aggregated_data %>% filter(city_state == "Baltimore,MD") %>% pull(unsolved_cnt), 
+  aggregated_data %>% filter(city_state == "Baltimore,MD") %>% pull(total_cnt)) %>% 
   broom::tidy()
   
 results_df <- 
@@ -63,7 +66,7 @@ results_df <-
 
 ```
 
-# plot estimates and CIs
+## plot estimates and CIs
 
 ```{r plot}
 results_df %>%
@@ -74,17 +77,36 @@ results_df %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-On average, subjects in experimental group have higher values than in the control group. There is also an increase in values over time in experimental group while in the control group there are no significant changes.
 
-```{r}
-lgt_df %>% 
-  mutate(id = as.factor(id),
-         week = as.factor(week)) %>% 
-  ggplot(aes(x = week, y = observations, group = id)) +
-  geom_line(aes(color = id)) +
-  facet_grid(.~group) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+# Problem 2
+## creating dataframe with tidy data for study participants
+
+
+```{r study_data, message = FALSE}
+study_data <- 
+  tibble(
+    path = list.files("./data")) %>% 
+  mutate(path = str_c("./data/", path),
+         data = map(.x = path, ~read_csv(.x))) %>% 
+  unnest(data) %>% 
+  mutate(id = str_extract(path, "\\d+"),
+         subject_id = as.numeric(id),
+         arm = str_extract(path, "con|exp")) %>% 
+  relocate(id, arm, path,everything()) %>% 
+  mutate(arm = recode(arm, con = "control", exp = "experimental")) %>% 
+  pivot_longer(week_1:week_8,
+               names_to = "week",
+               names_prefix = "week_",
+               values_to = "value") %>%
+  select (subject_id, arm, week, value)
 ```
 
+# Creating a spaghetti plot with observations on each subject over time.
 
+```{r spaghetti_plot}
+study_data %>% 
+  ggplot(aes(x = week, y = value, group = subject_id, color = arm)) +
+  geom_path()
+```
 
+On average, subjects in experimental group have higher values than in the control group. There is also an increase in values over time in experimental group while in the control group there are no significant changes.
