@@ -14,14 +14,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Problem 1
 
-```{r data}
+```{r data, warning=FALSE, message=FALSE}
 # loading the data
 url <- getURL("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv")
 data <- read.csv(text = url)
 
 ```
 
-## describiing the raw data
+## describing the raw data
 
 The data contains `r nrow(data)` observations of homicides, committed in `r data %>% distinct (city) %>% count()` cities in `r data %>% distinct (state) %>% count()` states.
 It has the names of the victims, their age as well as their gender and the disposition of cases and location (latitute and longitude).
@@ -55,7 +55,7 @@ prop.test(
   aggregated_data %>% filter(city_state == "Baltimore,MD") %>% pull(total_cnt)) %>% 
   broom::tidy()
   
-results_df <- 
+results <- 
   aggregated_data%>%
   mutate(
     prop_tests = map2(.x = unsolved_cnt, .y = total_cnt, ~prop.test(x=.x, n= .y)), tidy_tests = map(.x = prop_tests, ~broom::tidy(.x))
@@ -68,8 +68,8 @@ results_df <-
 
 ## plot estimates and CIs
 
-```{r plot}
-results_df %>%
+```{r plot, warning=FALSE, message=FALSE}
+results %>%
   mutate(city_state = fct_reorder(city_state, estimate)) %>%
   ggplot(aes(x = city_state, y = estimate)) +
   geom_point() +
@@ -103,7 +103,7 @@ study_data <-
 
 ## Creating a spaghetti plot with observations on each subject over time.
 
-```{r spaghetti_plot}
+```{r spaghetti_plot, warning=FALSE, message=FALSE}
 study_data %>% 
   ggplot(aes(x = week, y = value, group = subject_id, color = arm)) +
   geom_path()
@@ -114,7 +114,7 @@ On average, subjects in experimental group have higher values than in the contro
 
 # Problem 3
 
-```{r sim}
+```{r sim, warning=FALSE, message=FALSE}
 
 # Generate 5000 datasets with n = 30, mu = 0, and sigma = 5 and extract their means and p-values:
 
@@ -135,7 +135,7 @@ sim_results <-
   bind_rows()
 ```
 
-```{r mu_16}
+```{r mu_16, warning=FALSE, message=FALSE}
 # Repeat the above for μ={1,2,3,4,5,6}
 
 sim_results_2 <- 
@@ -148,7 +148,7 @@ sim_results_2 <-
 
 ```
 
-```{r plots}
+```{r plots, warning=FALSE, message=FALSE}
 # A plot showing the proportion of times the null was rejected vs the true value of μ
 sim_results_2 %>% 
 group_by(new_mu) %>%
@@ -163,26 +163,26 @@ group_by(new_mu) %>%
 ``` 
 Increase in estimate is associated with increase in power
 
-```{r plots_2}
+
+```{r plots_2, warning=FALSE, message=FALSE}
 # A plot showing the average estimate of μ̂ the true value of μ
-sim_results_2 %>% 
+df1 <- sim_results_2 %>% 
 group_by(new_mu) %>%
-  summarize(avg_estimate = mean(new_mu)) %>% 
-  ggplot(aes(x = new_mu, y = avg_estimate)) +
-  geom_point() +
-    labs(title = "Average estimated mu vs true mu",
+  summarize(avg_estimate = mean(mu_hat))
+
+df2 <- sim_results_2 %>% 
+  group_by(new_mu) %>% 
+  filter(as.numeric(p_value) < 0.05) %>% 
+  summarize(avg_estimate = mean(mu_hat))
+
+inner_join(df1, df2, by = "new_mu") %>%
+  ggplot() +
+  geom_point(aes(x=new_mu, y=avg_estimate.x), color = "red") +
+  geom_point(aes(x=new_mu, y=avg_estimate.y), color = "blue") +
+      labs(title = "Estimated mu vs true mu (red - all estimates, blue - estimates with rejected null)",
        x = "True mu",
        y = "Estimated mu")  
 
-sim_results_2 %>% 
-  group_by(new_mu) %>% 
-  filter(as.numeric(p_value) < 0.05 & mu_hat!=new_mu) %>% 
-  summarize(avg_estimate = mean(new_mu)) %>% 
-  ggplot(aes(x = new_mu, y = avg_estimate)) +
-  geom_point() +
-  geom_point(color = "purple")
-# on the x axis. Make a second plot (or overlay on the first) the average estimate of μ̂
-# only in samples for which the null was rejected on the y axis and the true value of μ
-# on the x axis.
-
 ```
+
+We see that whenever power increases estimated mu deviates towards true mu for the test with rejected null hypothesis, while for the tests with low power true mu and estimated mu are different.
