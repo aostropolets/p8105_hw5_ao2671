@@ -48,7 +48,7 @@ aggregated_data<-
 
 ## create a prop.test function to estimate proportion of homicides and use it for all cities avaliable
 
-```{r prop_test, message=FALSE, warning=FALSE}
+```{r prop_test, message=FALSE, warning=FALSE, error=FALSE}
 
 prop.test(
   aggregated_data %>% filter(city_state == "Baltimore,MD") %>% pull(unsolved_cnt), 
@@ -101,7 +101,7 @@ study_data <-
   select (subject_id, arm, week, value)
 ```
 
-# Creating a spaghetti plot with observations on each subject over time.
+## Creating a spaghetti plot with observations on each subject over time.
 
 ```{r spaghetti_plot}
 study_data %>% 
@@ -110,3 +110,40 @@ study_data %>%
 ```
 
 On average, subjects in experimental group have higher values than in the control group. There is also an increase in values over time in experimental group while in the control group there are no significant changes.
+
+
+# Problem 3
+
+```{r sim}
+
+# Generate 5000 datasets with n = 30, mu = 0, and sigma = 5 and extract their means and p-values:
+
+set.seed(3)
+
+sim_ft <- function(n = 30, mu, sigma = 5) {
+  
+  sim_data = tibble(
+    x = rnorm(n = n, mean = mu, sd = sigma))
+  sim_data %>% 
+    summarize(mu_hat = mean(x),
+              p_value = t.test(x) %>% 
+  broom::tidy() %>% pull(p.value))
+}
+
+sim_results <-
+  rerun(5000, sim_ft(mu = 0)) %>% 
+  bind_rows()
+```
+
+```{r }
+# Repeat the above for μ={1,2,3,4,5,6}
+, and complete the following:
+
+#Make a plot showing the proportion of times the null was rejected (the power of the test) on the y axis and the true value of μ
+# on the x axis. Describe the association between effect size and power.
+# Make a plot showing the average estimate of μ̂ on the y axis and the true value of μ
+# on the x axis. Make a second plot (or overlay on the first) the average estimate of μ̂
+# only in samples for which the null was rejected on the y axis and the true value of μ
+# on the x axis.
+
+```
